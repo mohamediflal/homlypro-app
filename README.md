@@ -1,3 +1,4 @@
-# home_service
 
-A new Flutter project.
+# homlypro-app
+MAD-mini project
+
