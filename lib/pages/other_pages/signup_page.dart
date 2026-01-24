@@ -143,8 +143,30 @@ class _SignupPageState extends State<SignupPage> {
                             )
                           ),
                         )),
-                      )
-          
+                        ),
+
+                        Positioned(
+                            top: 40,
+                            left: 16,
+                            child: SafeArea(
+                              child: CircleAvatar(
+                                backgroundColor: Colors.white,
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back, color: Colors.purple),
+                                  onPressed: () {
+                                    if (Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    } else {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
                       
                     ],
                   ),

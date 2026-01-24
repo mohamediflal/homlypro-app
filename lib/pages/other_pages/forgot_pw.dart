@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:home_service/constraints/validation/email_validation.dart';
 import 'package:home_service/pages/other_pages/login_page.dart';
-import 'package:home_service/pages/other_pages/reset_pw.dart';
+import 'package:home_service/services/auth_service.dart';
 
 class ForgotPwPage extends StatefulWidget {
   const ForgotPwPage({super.key});
@@ -12,9 +12,10 @@ class ForgotPwPage extends StatefulWidget {
 
 class _ForgotPwPageState extends State<ForgotPwPage> {
   final TextEditingController _emailController = TextEditingController();
-  String? _emailError; // added
+  final AuthService _authService = AuthService();
+  String? _emailError;
   bool _sending = false;
- 
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -32,12 +33,22 @@ class _ForgotPwPageState extends State<ForgotPwPage> {
     if (_emailError != null) return;
 
     setState(() => _sending = true);
-    // simulate API call
-    await Future.delayed(const Duration(seconds: 1));
+
+    String? error = await _authService.resetPassword(
+      email: _emailController.text.trim(),
+    );
+
     setState(() => _sending = false);
 
-    // show custom styled success dialog
-    await showDialog<void>(
+    if (error != null) {
+      _showErrorDialog(error);
+    } else {
+      _showSuccessDialog();
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
@@ -92,7 +103,7 @@ class _ForgotPwPageState extends State<ForgotPwPage> {
                       onPressed: () {
                         Navigator.of(context).pop();
                         Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const ResetPw()),
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -115,9 +126,85 @@ class _ForgotPwPageState extends State<ForgotPwPage> {
     );
   }
 
+  void _showErrorDialog(String message) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEBEE),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.error,
+                      color: Colors.red,
+                      size: 40,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Error',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+                const SizedBox(height: 18),
+                Align(
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: 140,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28)),
+                        elevation: 4,
+                      ),
+                      child: const Text('Ok',
+                          style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      //appBar: AppBar(title: const Text('Forgot Password')),
       body: SizedBox.expand(
         child: Container(
           decoration: const BoxDecoration(
@@ -246,7 +333,6 @@ class _ForgotPwPageState extends State<ForgotPwPage> {
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.center,
-          
                     child: TextButton(
                       onPressed: () {
                         Navigator.of(context).push(
@@ -268,8 +354,6 @@ class _ForgotPwPageState extends State<ForgotPwPage> {
                       ),
                     ),
                   ),
-
-                  
                 ],
               ),
             ),

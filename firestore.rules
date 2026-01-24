@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection
+    match /users/{userId} {
+      // Allow signup (create) for new customers
+      allow create: if request.auth != null && 
+                        request.resource.data.userType in ['customer', 'employee'];
+      
+      // Allow users to read their own document
+      allow read: if request.auth.uid == userId;
+      
+      // Allow users to update their own document
+      allow update: if request.auth.uid == userId;
+      
+      // Allow users to delete their own document
+      allow delete: if request.auth.uid == userId && 
+                       (resource.data.userType == 'customer' || resource.data.userType == 'employee');
+      
+      // Allow admins to read/write all user documents
+      allow read, write: if isAdmin();
+    }
+    
+    // Employees collection
+    match /employees/{employeeId} {
+      // Allow anyone authenticated to read employees (for admin assignment)
+      allow read: if request.auth != null;
+      
+      // Allow employees to read/update their own document
+      allow read, update: if request.auth != null && 
+                             request.auth.uid == request.resource.data.uid;
+      
+      // Allow employee creation during registration
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.uid &&
+                       request.resource.data.email == request.auth.token.email;
+      
+      // Allow admins to manage all employees
+      allow write: if isAdmin();
+    }
+    
+    // Bookings collection
+    match /bookings/{bookingId} {
+      // Allow users to create bookings
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.userId;
+      
+      // Allow users to read their own bookings
+      allow read: if request.auth.uid == resource.data.userId;
+      
+      // Allow employees to read assigned bookings
+      allow read: if request.auth != null && 
+                     resource.data.assignedEmployeeId != null &&
+                     isEmployeeWithId(resource.data.assignedEmployeeId);
+      
+      // Allow users to update their own bookings
+      allow update: if request.auth.uid == resource.data.userId ||
+                       isEmployeeWithId(resource.data.assignedEmployeeId);
+      
+      // Allow admins full access
+      allow read, write, delete: if isAdmin();
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Allow users to read their own notifications
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Allow authenticated users to create notifications (system notifications)
+      allow create: if request.auth != null;
+      
+      // Allow users to update/delete their own notifications (mark as read, delete)
+      allow update, delete: if request.auth != null && 
+                               (request.auth.uid == resource.data.userId || isAdmin());
+    }
+    
+    // Services collection
+    match /services/{serviceId} {
+      // Allow all authenticated users to read services
+      allow read: if request.auth != null;
+      
+      // Allow admins to create/update/delete services
+      allow write, delete: if isAdmin();
+    }
+    
+    // Helper functions
+    
+    // Check if current user is an admin
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
+    }
+    
+    // Check if current user is the employee with given ID
+    function isEmployeeWithId(employeeId) {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/employees/$(employeeId)).data.uid == request.auth.uid;
+    }
+  }
+}

@@ -4,10 +4,11 @@ import 'package:home_service/constraints/validation/email_validation.dart';
 import 'package:home_service/constraints/validation/signup_name_validation.dart';
 import 'package:home_service/constraints/validation/signup_pw_validation.dart';
 import 'package:home_service/pages/other_pages/login_page.dart';
+import 'package:home_service/services/auth_service.dart';
 
 class SignupForm extends StatefulWidget {
   final Function(String username, String email, String password)
-  onSignupSuccess;
+      onSignupSuccess;
 
   const SignupForm({super.key, required this.onSignupSuccess});
 
@@ -19,11 +20,13 @@ class _SignupFormState extends State<SignupForm> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   String? _usernameError;
   String? _emailError;
   String? _passwordError;
+  String? _authError;
   bool _obscurePassword = true;
-  //bool _agreeToTerms = false;
+  bool _isLoading = false;
   late TapGestureRecognizer _tosRecognizer;
   late TapGestureRecognizer _ppRecognizer;
 
@@ -46,13 +49,35 @@ class _SignupFormState extends State<SignupForm> {
         _passwordError == null;
   }
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
     if (_validateAll()) {
-      widget.onSignupSuccess(
-        _usernameController.text.trim(),
-        _emailController.text.trim(),
-        _passwordController.text,
+      setState(() {
+        _isLoading = true;
+        _authError = null;
+      });
+
+      String? error = await _authService.signUpWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        username: _usernameController.text.trim(),
       );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (error != null) {
+        setState(() {
+          _authError = error;
+        });
+        _showErrorSnackbar(error);
+      } else {
+        widget.onSignupSuccess(
+          _usernameController.text.trim(),
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+      }
     }
   }
 
@@ -76,6 +101,15 @@ class _SignupFormState extends State<SignupForm> {
         _passwordController.text,
       );
     });
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override
@@ -177,7 +211,6 @@ class _SignupFormState extends State<SignupForm> {
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
-              // 👇 Show red text if invalid
               if (_emailError != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 6, left: 8),
@@ -193,7 +226,6 @@ class _SignupFormState extends State<SignupForm> {
         const SizedBox(height: 0),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          // single child for Padding: a Column containing TextField + Forgot row
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -201,7 +233,7 @@ class _SignupFormState extends State<SignupForm> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 onChanged: (v) {
-                  _validatePassword(); // validate live as user types
+                  _validatePassword();
                 },
                 decoration: InputDecoration(
                   hintText: 'Password',
@@ -264,16 +296,25 @@ class _SignupFormState extends State<SignupForm> {
                     ),
                     elevation: 2,
                   ),
-
-                  onPressed: _onSubmit,
-                  child: const Text(
-                    "Sign Up",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  onPressed: _isLoading ? null : _onSubmit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          "Sign Up",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "223440389399",
+    "firebase_url": "https://homlypro-app-default-rtdb.firebaseio.com",
+    "project_id": "homlypro-app",
+    "storage_bucket": "homlypro-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:223440389399:android:7c410b61457558e0c52352",
+        "android_client_info": {
+          "package_name": "com.example.home_service"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "223440389399-n9lupq24vr7n05fmjf22hhg59upg5q2f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwUmOiw_5eT_C0RcWU0i9hdMuBPdrTj_4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "223440389399-n9lupq24vr7n05fmjf22hhg59upg5q2f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "223440389399-bf7l0s0hljtfb2dqu1toqu125nfgtccm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.homeService"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

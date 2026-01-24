@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
 
 class SerBookingPage extends StatefulWidget {
   final String? serviceTitle;
@@ -282,11 +285,11 @@ class _SerBookingPageState extends State<SerBookingPage> {
     ));
   }
 
-  void _onBook() {
+  void _onBook() async {
     final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-   // final desc = descriptionController.text.trim();
-   // final addr = addressController.text.trim();
     final phone = phoneController.text.trim();
+    final desc = descriptionController.text.trim();
+    final addr = addressController.text.trim();
 
     if (!_isPhoneValid(phone)) {
       setState(() => phoneError = 'Enter a valid phone number');
@@ -294,6 +297,59 @@ class _SerBookingPageState extends State<SerBookingPage> {
     }
 
     setState(() => phoneError = null);
+
+    // Get current user
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to book a service')),
+      );
+      return;
+    }
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Processing your booking...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final firestoreService = FirestoreService();
+      final notificationService = NotificationService();
+
+      // Create booking in Firestore
+      final bookingId = await firestoreService.createBooking(
+        userId: user.uid,
+        serviceType: widget.serviceTitle ?? 'Service',
+        serviceDescription: desc,
+        bookingDate: selectedDate,
+        address: addr,
+        city: 'Default City', // You can make this dynamic
+        phoneNumber: phone,
+        estimatedCost: 0.0, // Set based on service pricing
+      );
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (bookingId != null) {
+        // Send confirmation notification
+        await notificationService.sendNotificationToUser(
+          userId: user.uid,
+          title: 'Booking Confirmed',
+          body: '${widget.serviceTitle ?? 'Service'} booked for $dateStr at $selectedTime',
+          notificationType: 'booking_confirmed',
+          data: {'bookingId': bookingId},
+        );
 
     // Show a confirmation dialog styled like the provided image.
     showDialog(
@@ -322,7 +378,7 @@ class _SerBookingPageState extends State<SerBookingPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${widget.serviceTitle ?? ''} booked on $dateStr at $selectedTime',
+                      '${widget.serviceTitle ?? 'Service'} booked on $dateStr at $selectedTime',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.black54),
                 ),
@@ -351,6 +407,23 @@ class _SerBookingPageState extends State<SerBookingPage> {
         );
       },
     );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to create booking. Please try again.')),
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   @override

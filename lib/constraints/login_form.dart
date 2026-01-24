@@ -3,6 +3,7 @@ import 'package:home_service/constraints/validation/email_validation.dart';
 import 'package:home_service/constraints/validation/login_pw_validation.dart';
 import 'package:home_service/pages/other_pages/signup_page.dart';
 import 'package:home_service/pages/other_pages/forgot_pw.dart';
+import 'package:home_service/services/auth_service.dart';
 
 class LoginForm extends StatefulWidget {
   final Function(String email, String password) onLoginSuccess;
@@ -16,16 +17,40 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   String? _emailError;
   String? _passwordError;
+  String? _authError;
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
-  void _validateAndLogin() {
+  Future<void> _validateAndLogin() async {
     _validateEmail();
     _validatePassword();
 
     if (_emailError == null && _passwordError == null) {
-      widget.onLoginSuccess(_emailController.text, _passwordController.text);
+      setState(() {
+        _isLoading = true;
+        _authError = null;
+      });
+
+      String? error = await _authService.signInWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (error != null) {
+        setState(() {
+          _authError = error;
+        });
+        _showErrorSnackbar(error);
+      } else {
+        widget.onLoginSuccess(_emailController.text, _passwordController.text);
+      }
     }
   }
 
@@ -43,6 +68,15 @@ class _LoginFormState extends State<LoginForm> {
     });
   }
 
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -55,7 +89,7 @@ class _LoginFormState extends State<LoginForm> {
     return Column(
       children: [
         // Email
-        SizedBox(height: 1),
+        const SizedBox(height: 1),
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -163,7 +197,6 @@ class _LoginFormState extends State<LoginForm> {
           alignment: Alignment.center,
           child: TextButton(
             onPressed: () {
-              // Handle forgot password action
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const ForgotPwPage()),
               );
@@ -194,22 +227,30 @@ class _LoginFormState extends State<LoginForm> {
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
-              onPressed: _validateAndLogin,
-              child: const Text(
-                'Login',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              onPressed: _isLoading ? null : _validateAndLogin,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Login',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ),
         const SizedBox(height: 15),
         Align(
           alignment: Alignment.center,
-
           child: TextButton(
             onPressed: () {
               Navigator.of(context).push(
